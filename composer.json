@@ -1,5 +1,5 @@
 {
-  "name": "craftcms/wp-import",
+  "name": "codyjames/wp-import",
   "description": "WordPress → Craft CMS content importer",
   "type": "yii2-extension",
   "keywords": [
