@@ -90,6 +90,31 @@ class PostType extends BaseConfigurableImporter
         return Entry::class;
     }
 
+    public function autop($pee, $br = true) {
+        if (trim($pee) === '') return '';
+    
+        $pee = $pee . "\n"; // Just to make things a bit easier, pad the end
+        $pee = preg_replace('|<br\s*/?>\s*<br\s*/?>|', "\n\n", $pee);
+        $pee = preg_replace('!(<script[^>]*>.*?</script>)!is', "\n$1\n", $pee);
+        $pee = preg_replace("/\n\n+/", "\n\n", $pee); // take care of duplicates
+        $pees = preg_split('/\n\s*\n/', $pee, -1, PREG_SPLIT_NO_EMPTY);
+        $pee = '';
+    
+        foreach ($pees as $tinkle) {
+            $pee .= '<p>' . trim($tinkle, "\n") . "</p>\n";
+        }
+    
+        $pee = preg_replace('|<p>\s*</p>|', '', $pee); // remove empty p
+        $pee = preg_replace('!<p>([^<]+)</(div|address|form)>!', "<p>$1</p></$2>", $pee);
+        $pee = preg_replace('!<p>\s*(</?' . implode('|</?', ['blockquote', 'ol', 'ul', 'li']) . '[^>]*>)\s*</p>!', "$1", $pee);
+    
+        if ($br) {
+            $pee = preg_replace('|(?<!<br />)\s*\n|', "<br />\n", $pee);
+        }
+    
+        return $pee;
+    }
+
     public function populate(ElementInterface $element, array $data): void
     {
         /** @var Entry $element */
@@ -184,6 +209,11 @@ class PostType extends BaseConfigurableImporter
             ));
         }
 
+        // Add Custom Event Start Date field
+        if (!empty($data['meta']['em_start_date'])) {
+            $fieldValues['eventStartDate'] = DateTimeHelper::toDateTime($data['meta']['em_start_date']);
+        }
+
         foreach ($fieldValues as $handle => $value) {
             try {
                 $element->setFieldValue($handle, $value);
@@ -199,7 +229,10 @@ class PostType extends BaseConfigurableImporter
                     throw new Exception(implode(', ', $element->getFirstErrors()));
                 }
             }
-            $element->setFieldValue(PostContent::get()->handle, $this->command->renderBlocks($data['content_parsed'], $element));
+            // $element->setFieldValue(PostContent::get()->handle, $this->command->renderBlocks($data['content_parsed'], $element));
+            $content = $this->command->renderBlocks($data['content_parsed'], $element);
+            $content = $this->autop($content);
+            $element->setFieldValue(PostContent::get()->handle, $content);
         }
     }
 
